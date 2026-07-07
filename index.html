@@ -8,7 +8,9 @@
   :root{
     --bg: #0b0d10;
     --panel: #14171c;
+    --panel2: #1b1f26;
     --accent: #ff5a36;
+    --green: #39ff6a;
     --text: #eef0f2;
     --muted: #7c8592;
   }
@@ -42,18 +44,58 @@
     transform:scale(1);
     transition:transform 3.2s cubic-bezier(.22,.61,.16,1);
   }
-  #hint{
-    position:absolute; top:18px; left:0; right:0;
+  #teamResultLabel{
+    position:absolute;
+    left:50%; bottom:120px;
+    transform:translateX(-50%) translateY(12px);
+    background:rgba(10,12,14,.72);
+    backdrop-filter:blur(6px);
+    border:1px solid rgba(57,255,106,.5);
+    padding:12px 20px;
+    border-radius:14px;
     text-align:center;
-    font-size:13px; letter-spacing:.04em;
-    color:var(--muted);
+    opacity:0;
+    transition:opacity .5s ease, transform .5s ease;
     pointer-events:none;
+    max-width:88%;
   }
+  #teamResultLabel.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+  #teamResultLabel .tName{ font-size:20px; font-weight:700; color:var(--green); }
+  #teamResultLabel .tSub{ font-size:13px; color:var(--muted); margin-top:2px; }
+
+  /* top icon buttons */
+  .iconBtn{
+    position:fixed; top:calc(14px + env(safe-area-inset-top));
+    width:44px; height:44px; border-radius:50%;
+    background:rgba(20,23,28,.72); backdrop-filter:blur(6px);
+    color:var(--text); font-size:19px;
+    display:flex; align-items:center; justify-content:center;
+    z-index:40; padding:0; box-shadow:0 4px 14px rgba(0,0,0,.35);
+  }
+  #menuBtn{ left:14px; }
+  #fullscreenBtn{ right:14px; }
+
+  #statusBar{
+    position:fixed; top:calc(64px + env(safe-area-inset-top));
+    left:16px; right:16px;
+    text-align:center; font-size:13px; color:var(--muted);
+    min-height:18px;
+    pointer-events:none;
+    z-index:30;
+  }
+  .dot{
+    display:inline-block; width:8px; height:8px; border-radius:50%;
+    background:var(--accent); margin-right:6px;
+    animation:pulse 1s infinite ease-in-out;
+  }
+  @keyframes pulse{0%,100%{opacity:.3}50%{opacity:1}}
+
   #controls{
     position:fixed; bottom:0; left:0; right:0;
     padding:22px 20px calc(28px + env(safe-area-inset-bottom));
     display:flex; justify-content:center; gap:16px;
     background:linear-gradient(to top, rgba(0,0,0,.65), transparent);
+    z-index:20;
   }
   button{
     border:none; cursor:pointer;
@@ -61,6 +103,7 @@
     padding:16px 26px; border-radius:999px;
     background:var(--panel); color:var(--text);
     box-shadow:0 4px 18px rgba(0,0,0,.4);
+    font-family:inherit;
   }
   button.primary{
     background:var(--accent); color:#1a0a05;
@@ -71,18 +114,74 @@
     background:#fff; border:5px solid rgba(255,255,255,.25);
     padding:0;
   }
-  #status{
-    position:fixed; top:18px; left:0; right:0;
-    text-align:center; font-size:13px; color:var(--muted);
-    padding:0 20px;
-  }
-  .dot{
-    display:inline-block; width:8px; height:8px; border-radius:50%;
-    background:var(--accent); margin-right:6px;
-    animation:pulse 1s infinite ease-in-out;
-  }
-  @keyframes pulse{0%,100%{opacity:.3}50%{opacity:1}}
   canvas{display:none;}
+
+  /* sidebar */
+  #sidebarOverlay{
+    position:fixed; inset:0; background:rgba(0,0,0,.5);
+    opacity:0; pointer-events:none; transition:opacity .25s ease;
+    z-index:50;
+  }
+  #sidebarOverlay.open{ opacity:1; pointer-events:auto; }
+  #sidebar{
+    position:fixed; top:0; left:0; bottom:0; width:78%; max-width:300px;
+    background:var(--panel); z-index:60;
+    transform:translateX(-100%); transition:transform .28s ease;
+    padding:calc(20px + env(safe-area-inset-top)) 18px 20px;
+    display:flex; flex-direction:column; gap:6px;
+  }
+  #sidebar.open{ transform:translateX(0); }
+  .sidebar-header{
+    display:flex; align-items:center; justify-content:space-between;
+    font-size:18px; font-weight:700; margin-bottom:14px;
+  }
+  .sidebar-header button{
+    background:transparent; box-shadow:none; padding:6px 10px; font-size:18px;
+  }
+  .menu-item{
+    display:flex; align-items:center; gap:10px;
+    background:var(--panel2); text-align:left;
+    border-radius:12px; padding:14px 16px; font-size:15px;
+    width:100%; justify-content:flex-start;
+  }
+  .menu-item:active{ background:#232833; }
+
+  /* team modal */
+  .modal-overlay{
+    position:fixed; inset:0; background:rgba(0,0,0,.6);
+    display:none; align-items:flex-end; justify-content:center;
+    z-index:70;
+  }
+  .modal-overlay.open{ display:flex; }
+  .modal{
+    background:var(--panel); width:100%; max-width:480px;
+    border-radius:20px 20px 0 0;
+    padding:22px 20px calc(24px + env(safe-area-inset-bottom));
+    max-height:82vh; overflow-y:auto;
+  }
+  .modal-head{ display:flex; justify-content:space-between; align-items:center; }
+  .modal h2{ margin:0 0 4px; font-size:19px; }
+  .modal-sub{ color:var(--muted); font-size:13px; margin:0 0 16px; }
+  #teamList{ display:flex; flex-direction:column; gap:8px; margin-bottom:14px; }
+  .team-row{
+    display:flex; align-items:center; justify-content:space-between;
+    background:var(--panel2); border-radius:12px; padding:12px 14px;
+  }
+  .team-row .tInfo{ font-size:14px; }
+  .team-row .tInfo b{ display:block; font-size:15px; }
+  .team-row .delBtn{
+    background:transparent; box-shadow:none; color:#ff6b6b;
+    padding:4px 8px; font-size:13px;
+  }
+  .team-form{ display:flex; gap:8px; margin-bottom:16px; }
+  .team-form input{
+    flex:1; background:var(--panel2); border:1px solid #2a2f38; color:var(--text);
+    border-radius:10px; padding:12px; font-size:14px; min-width:0;
+  }
+  .team-form input#teamCountInput{ flex:0 0 84px; }
+  .team-form button{ padding:12px 16px; font-size:14px; }
+  #closeTeamModal{ width:100%; }
+  .empty-note{ color:var(--muted); font-size:13px; text-align:center; padding:10px 0; }
 </style>
 </head>
 <body>
@@ -91,11 +190,16 @@
   <video id="video" autoplay playsinline muted></video>
   <div id="resultWrap">
     <img id="resultImg" alt="ภาพที่ถ่าย">
+    <div id="teamResultLabel">
+      <div class="tName" id="teamResultName"></div>
+      <div class="tSub" id="teamResultSub"></div>
+    </div>
   </div>
 </div>
 
-<div id="hint">แตะปุ่มกลมเพื่อถ่ายภาพ</div>
-<div id="status"></div>
+<button id="menuBtn" class="iconBtn" aria-label="เมนู">☰</button>
+<button id="fullscreenBtn" class="iconBtn" aria-label="เต็มจอ">⛶</button>
+<div id="statusBar"></div>
 
 <canvas id="canvas"></canvas>
 
@@ -106,31 +210,175 @@
   <button id="retryBtn" style="display:none;">ถ่ายใหม่</button>
 </div>
 
+<!-- sidebar -->
+<div id="sidebarOverlay"></div>
+<aside id="sidebar">
+  <div class="sidebar-header">
+    เมนู
+    <button id="closeSidebar">✕</button>
+  </div>
+  <button class="menu-item" id="openTeamMgmt">👥&nbsp; จัดการทีม</button>
+</aside>
+
+<!-- team management modal -->
+<div id="teamModal" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-head">
+      <h2>จัดการทีม</h2>
+      <button id="closeModalX" style="background:transparent;box-shadow:none;font-size:18px;">✕</button>
+    </div>
+    <p class="modal-sub">กำหนดชื่อทีมและจำนวนคนในทีม ระบบจะสุ่มทีม + คนในทีมให้ทุกครั้งที่ถ่ายภาพ</p>
+    <div id="teamList"></div>
+    <div class="team-form">
+      <input id="teamNameInput" placeholder="ชื่อทีม เช่น ทีม A">
+      <input id="teamCountInput" type="number" min="1" placeholder="จำนวนคน">
+      <button id="addTeamBtn">เพิ่ม</button>
+    </div>
+    <button id="closeTeamModal" class="primary">เสร็จสิ้น</button>
+  </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.js"></script>
 <script>
 const video = document.getElementById('video');
 const canvas = document.getElementById('canvas');
 const resultWrap = document.getElementById('resultWrap');
 const resultImg = document.getElementById('resultImg');
+const teamResultLabel = document.getElementById('teamResultLabel');
+const teamResultName = document.getElementById('teamResultName');
+const teamResultSub = document.getElementById('teamResultSub');
 const startBtn = document.getElementById('startBtn');
 const switchBtn = document.getElementById('switchBtn');
 const shutterBtn = document.getElementById('shutter');
 const retryBtn = document.getElementById('retryBtn');
-const hint = document.getElementById('hint');
-const statusEl = document.getElementById('status');
+const statusBar = document.getElementById('statusBar');
+const menuBtn = document.getElementById('menuBtn');
+const fullscreenBtn = document.getElementById('fullscreenBtn');
+const sidebar = document.getElementById('sidebar');
+const sidebarOverlay = document.getElementById('sidebarOverlay');
+const closeSidebar = document.getElementById('closeSidebar');
+const openTeamMgmt = document.getElementById('openTeamMgmt');
+const teamModal = document.getElementById('teamModal');
+const closeModalX = document.getElementById('closeModalX');
+const closeTeamModal = document.getElementById('closeTeamModal');
+const teamList = document.getElementById('teamList');
+const teamNameInput = document.getElementById('teamNameInput');
+const teamCountInput = document.getElementById('teamCountInput');
+const addTeamBtn = document.getElementById('addTeamBtn');
 
 let stream = null;
 let facingMode = 'environment';
 let modelsReady = false;
+let statusTimer = null;
 
+// ---------- สถานะ/ข้อความ (จุดเดียว ป้องกันข้อความซ้อนกัน) ----------
 function setStatus(msg, spinning){
-  statusEl.innerHTML = spinning ? `<span class="dot"></span>${msg}` : msg;
+  if(statusTimer){ clearTimeout(statusTimer); statusTimer = null; }
+  statusBar.innerHTML = msg ? (spinning ? `<span class="dot"></span>${msg}` : msg) : '';
+}
+function setStatusTemporary(msg, ms){
+  setStatus(msg);
+  statusTimer = setTimeout(()=> setStatus(''), ms || 2600);
 }
 
+// ---------- ทีม: บันทึก/โหลด ----------
+const TEAM_KEY = 'faceZoom_teams_v1';
+let teams = [];
+function loadTeams(){
+  try{
+    const raw = localStorage.getItem(TEAM_KEY);
+    teams = raw ? JSON.parse(raw) : [];
+  }catch(e){ teams = []; }
+}
+function saveTeams(){
+  try{ localStorage.setItem(TEAM_KEY, JSON.stringify(teams)); }catch(e){}
+}
+function renderTeamList(){
+  teamList.innerHTML = '';
+  if(teams.length === 0){
+    teamList.innerHTML = '<div class="empty-note">ยังไม่มีทีม เพิ่มทีมแรกของคุณด้านล่าง</div>';
+    return;
+  }
+  teams.forEach(t=>{
+    const row = document.createElement('div');
+    row.className = 'team-row';
+    row.innerHTML = `
+      <div class="tInfo"><b>${escapeHtml(t.name)}</b>${t.count} คน</div>
+      <button class="delBtn" data-id="${t.id}">ลบ</button>
+    `;
+    teamList.appendChild(row);
+  });
+  teamList.querySelectorAll('.delBtn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      teams = teams.filter(t => String(t.id) !== btn.dataset.id);
+      saveTeams();
+      renderTeamList();
+      updateShutterAvailability();
+    });
+  });
+}
+function escapeHtml(s){
+  return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+addTeamBtn.addEventListener('click', ()=>{
+  const name = teamNameInput.value.trim();
+  const count = parseInt(teamCountInput.value, 10);
+  if(!name){ setStatusTemporary('กรุณาใส่ชื่อทีม'); return; }
+  if(!count || count < 1){ setStatusTemporary('กรุณาใส่จำนวนคนให้ถูกต้อง'); return; }
+  teams.push({ id: Date.now() + Math.random(), name, count });
+  saveTeams();
+  teamNameInput.value = '';
+  teamCountInput.value = '';
+  renderTeamList();
+  updateShutterAvailability();
+  teamNameInput.focus();
+});
+
+function openTeamModal(){
+  renderTeamList();
+  teamModal.classList.add('open');
+}
+function hideTeamModal(){
+  teamModal.classList.remove('open');
+}
+closeModalX.addEventListener('click', hideTeamModal);
+closeTeamModal.addEventListener('click', hideTeamModal);
+
+function updateShutterAvailability(){
+  // ปุ่มถ่ายยังกดได้เสมอ แต่ถ้ายังไม่มีทีมจะเตือนตอนกด
+}
+
+// ---------- sidebar ----------
+function openSidebar(){ sidebar.classList.add('open'); sidebarOverlay.classList.add('open'); }
+function closeSidebarFn(){ sidebar.classList.remove('open'); sidebarOverlay.classList.remove('open'); }
+menuBtn.addEventListener('click', openSidebar);
+closeSidebar.addEventListener('click', closeSidebarFn);
+sidebarOverlay.addEventListener('click', closeSidebarFn);
+openTeamMgmt.addEventListener('click', ()=>{ closeSidebarFn(); openTeamModal(); });
+
+// ---------- fullscreen ----------
+async function toggleFullscreen(){
+  try{
+    if(!document.fullscreenElement){
+      await document.documentElement.requestFullscreen();
+    }else{
+      await document.exitFullscreen();
+    }
+  }catch(e){ setStatusTemporary('อุปกรณ์นี้ไม่รองรับโหมดเต็มจอ'); }
+}
+fullscreenBtn.addEventListener('click', toggleFullscreen);
+document.addEventListener('fullscreenchange', ()=>{
+  fullscreenBtn.textContent = document.fullscreenElement ? '⤡' : '⛶';
+});
+
+// ---------- กล้อง / โมเดล ----------
 async function loadModels(){
   setStatus('กำลังโหลดระบบตรวจจับใบหน้า...', true);
   const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model';
-  await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
+  await Promise.all([
+    faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL),
+    faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL)
+  ]);
   modelsReady = true;
   setStatus('');
 }
@@ -139,7 +387,12 @@ async function startCamera(){
   try{
     if(stream){ stream.getTracks().forEach(t=>t.stop()); }
     stream = await navigator.mediaDevices.getUserMedia({
-      video:{ facingMode, width:{ideal:1280}, height:{ideal:1280} },
+      video:{
+        facingMode,
+        width:{ ideal: 4096 },
+        height:{ ideal: 4096 },
+        advanced:[{ focusMode: 'continuous' }]
+      },
       audio:false
     });
     video.srcObject = stream;
@@ -148,9 +401,11 @@ async function startCamera(){
     shutterBtn.style.display = 'inline-block';
     retryBtn.style.display = 'none';
     resultWrap.style.display = 'none';
+    teamResultLabel.classList.remove('show');
     video.style.display = 'block';
-    hint.textContent = 'แตะปุ่มกลมเพื่อถ่ายภาพ';
+    setStatus('แตะปุ่มกลมเพื่อถ่ายภาพ');
     if(!modelsReady) await loadModels();
+    else setStatus('');
   }catch(err){
     setStatus('เปิดกล้องไม่ได้: ' + err.message);
   }
@@ -161,12 +416,24 @@ switchBtn.addEventListener('click', ()=>{
   startCamera();
 });
 
-startBtn.addEventListener('click', startCamera);
+startBtn.addEventListener('click', ()=>{
+  if(teams.length === 0){
+    openTeamModal();
+    setStatusTemporary('สร้างทีมอย่างน้อย 1 ทีมก่อนเริ่มใช้งาน', 3200);
+    return;
+  }
+  startCamera();
+});
 retryBtn.addEventListener('click', startCamera);
 
 shutterBtn.addEventListener('click', async ()=>{
   if(!modelsReady){
     setStatus('ระบบตรวจจับใบหน้ายังโหลดไม่เสร็จ รอสักครู่...', true);
+    return;
+  }
+  if(teams.length === 0){
+    openTeamModal();
+    setStatusTemporary('กรุณาสร้างทีมก่อนถ่ายภาพ', 3000);
     return;
   }
 
@@ -180,23 +447,30 @@ shutterBtn.addEventListener('click', async ()=>{
 
   setStatus('กำลังตรวจจับใบหน้า...', true);
 
-  const detections = await faceapi.detectAllFaces(
+  let detections = await faceapi.detectAllFaces(
     canvas,
-    new faceapi.TinyFaceDetectorOptions({ inputSize: 416, scoreThreshold: 0.4 })
+    new faceapi.SsdMobilenetv1Options({ minConfidence: 0.25, maxResults: 50 })
   );
 
+  if (detections.length === 0) {
+    detections = await faceapi.detectAllFaces(
+      canvas,
+      new faceapi.TinyFaceDetectorOptions({ inputSize: 608, scoreThreshold: 0.15 })
+    );
+  }
+
+  teamResultLabel.classList.remove('show');
+
   if(detections.length === 0){
-    // ไม่พบใบหน้า แสดงภาพเปล่าๆ
     video.style.display = 'none';
     resultWrap.style.display = 'block';
     resultImg.style.transition = 'none';
     resultImg.style.transform = 'scale(1)';
-    resultImg.src = canvas.toDataURL('image/jpeg', 0.92);
+    resultImg.src = canvas.toDataURL('image/jpeg', 0.98);
     shutterBtn.style.display = 'none';
     switchBtn.style.display = 'none';
     retryBtn.style.display = 'inline-block';
     setStatus('ไม่พบใบหน้าในภาพ ลองถ่ายใหม่');
-    hint.textContent = 'ไม่พบใบหน้า';
     return;
   }
 
@@ -205,7 +479,6 @@ shutterBtn.addEventListener('click', async ()=>{
   const box = pick.box;
 
   // วาดกรอบสีเขียวรอบใบหน้าที่สุ่มได้ ลงไปในภาพจริงเลย
-  // (เพื่อให้กรอบเคลื่อน/ซูมไปพร้อมกับภาพอย่างแม่นยำ)
   const pad = box.width * 0.12;
   const bx = Math.max(0, box.x - pad);
   const by = Math.max(0, box.y - pad);
@@ -219,7 +492,6 @@ shutterBtn.addEventListener('click', async ()=>{
   ctx.strokeRect(bx, by, bw, bh);
   ctx.shadowBlur = 0;
 
-  // มุมกรอบสไตล์ viewfinder ให้ดูเหมือนล็อกเป้าหมาย
   const cornerLen = Math.min(bw, bh) * 0.18;
   ctx.lineWidth = lineW * 1.4;
   const corners = [
@@ -234,32 +506,42 @@ shutterBtn.addEventListener('click', async ()=>{
     ctx.stroke();
   });
 
-  // หยุดกล้อง แสดงภาพนิ่ง (มีกรอบเขียวติดอยู่ในภาพแล้ว)
   video.style.display = 'none';
   resultWrap.style.display = 'block';
   resultImg.style.transition = 'none';
   resultImg.style.transform = 'scale(1)';
-  resultImg.src = canvas.toDataURL('image/jpeg', 0.92);
+  resultImg.src = canvas.toDataURL('image/jpeg', 0.98);
   shutterBtn.style.display = 'none';
   switchBtn.style.display = 'none';
   retryBtn.style.display = 'inline-block';
 
   const faceCenterX = (box.x + box.width / 2) / w * 100;
   const faceCenterY = (box.y + box.height / 2) / h * 100;
-
   resultImg.style.transformOrigin = `${faceCenterX}% ${faceCenterY}%`;
 
-  setStatus(`พบ ${detections.length} ใบหน้า — สุ่มซูมเข้า 1 คน`);
-  hint.textContent = `กำลังซูมเข้าใบหน้าที่สุ่มได้`;
+  // สุ่มทีม + คนในทีม จากจำนวนคนที่ตั้งค่าไว้ตอนสร้างทีม
+  const team = teams[Math.floor(Math.random() * teams.length)];
+  const person = Math.floor(Math.random() * team.count) + 1;
+  teamResultName.textContent = team.name;
+  teamResultSub.textContent = `คนที่ ${person} จาก ${team.count} คน`;
 
-  // บังคับ reflow แล้วค่อยเริ่ม transition เพื่อให้ transform-origin มีผล
+  setStatus(`พบ ${detections.length} ใบหน้า — สุ่มซูมเข้า 1 คน`);
+
   requestAnimationFrame(()=>{
     requestAnimationFrame(()=>{
       resultImg.style.transition = 'transform 3.2s cubic-bezier(.22,.61,.16,1)';
       resultImg.style.transform = 'scale(2.6)';
+      teamResultLabel.classList.add('show');
     });
   });
 });
+
+// ---------- เริ่มต้น ----------
+loadTeams();
+if(teams.length === 0){
+  openTeamModal();
+}
 </script>
 </body>
 </html>
+
