@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>สุ่มซูมใบหน้า</title>
+<style>
+  :root{
+    --bg: #0b0d10;
+    --panel: #14171c;
+    --accent: #ff5a36;
+    --text: #eef0f2;
+    --muted: #7c8592;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{
+    margin:0; padding:0; height:100%;
+    background:var(--bg); color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    overscroll-behavior:none;
+  }
+  #stage{
+    position:fixed; inset:0;
+    display:flex; align-items:center; justify-content:center;
+    overflow:hidden; background:#000;
+  }
+  video, #resultWrap{
+    width:100%; height:100%;
+    object-fit:cover;
+  }
+  #resultWrap{
+    position:absolute; inset:0;
+    display:none;
+    overflow:hidden;
+  }
+  #resultImg{
+    position:absolute;
+    top:0; left:0;
+    width:100%; height:100%;
+    object-fit:cover;
+    transform-origin:50% 50%;
+    transform:scale(1);
+    transition:transform 3.2s cubic-bezier(.22,.61,.16,1);
+  }
+  #hint{
+    position:absolute; top:18px; left:0; right:0;
+    text-align:center;
+    font-size:13px; letter-spacing:.04em;
+    color:var(--muted);
+    pointer-events:none;
+  }
+  #controls{
+    position:fixed; bottom:0; left:0; right:0;
+    padding:22px 20px calc(28px + env(safe-area-inset-bottom));
+    display:flex; justify-content:center; gap:16px;
+    background:linear-gradient(to top, rgba(0,0,0,.65), transparent);
+  }
+  button{
+    border:none; cursor:pointer;
+    font-size:16px; font-weight:600;
+    padding:16px 26px; border-radius:999px;
+    background:var(--panel); color:var(--text);
+    box-shadow:0 4px 18px rgba(0,0,0,.4);
+  }
+  button.primary{
+    background:var(--accent); color:#1a0a05;
+  }
+  button:disabled{opacity:.35; cursor:not-allowed;}
+  #shutter{
+    width:74px; height:74px; border-radius:50%;
+    background:#fff; border:5px solid rgba(255,255,255,.25);
+    padding:0;
+  }
+  #status{
+    position:fixed; top:18px; left:0; right:0;
+    text-align:center; font-size:13px; color:var(--muted);
+    padding:0 20px;
+  }
+  .dot{
+    display:inline-block; width:8px; height:8px; border-radius:50%;
+    background:var(--accent); margin-right:6px;
+    animation:pulse 1s infinite ease-in-out;
+  }
+  @keyframes pulse{0%,100%{opacity:.3}50%{opacity:1}}
+  canvas{display:none;}
+</style>
+</head>
+<body>
+
+<div id="stage">
+  <video id="video" autoplay playsinline muted></video>
+  <div id="resultWrap">
+    <img id="resultImg" alt="ภาพที่ถ่าย">
+  </div>
+</div>
+
+<div id="hint">แตะปุ่มกลมเพื่อถ่ายภาพ</div>
+<div id="status"></div>
+
+<canvas id="canvas"></canvas>
+
+<div id="controls">
+  <button id="startBtn" class="primary">เปิดกล้อง</button>
+  <button id="switchBtn" style="display:none;">สลับกล้อง</button>
+  <button id="shutter" style="display:none;"></button>
+  <button id="retryBtn" style="display:none;">ถ่ายใหม่</button>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+<script>
+const video = document.getElementById('video');
+const canvas = document.getElementById('canvas');
+const resultWrap = document.getElementById('resultWrap');
+const resultImg = document.getElementById('resultImg');
+const startBtn = document.getElementById('startBtn');
+const switchBtn = document.getElementById('switchBtn');
+const shutterBtn = document.getElementById('shutter');
+const retryBtn = document.getElementById('retryBtn');
+const hint = document.getElementById('hint');
+const statusEl = document.getElementById('status');
+
+let stream = null;
+let facingMode = 'environment';
+let modelsReady = false;
+
+function setStatus(msg, spinning){
+  statusEl.innerHTML = spinning ? `<span class="dot"></span>${msg}` : msg;
+}
+
+async function loadModels(){
+  setStatus('กำลังโหลดระบบตรวจจับใบหน้า...', true);
+  const MODEL_URL = 'https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/weights';
+  await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
+  modelsReady = true;
+  setStatus('');
+}
+
+async function startCamera(){
+  try{
+    if(stream){ stream.getTracks().forEach(t=>t.stop()); }
+    stream = await navigator.mediaDevices.getUserMedia({
+      video:{ facingMode, width:{ideal:1280}, height:{ideal:1280} },
+      audio:false
+    });
+    video.srcObject = stream;
+    startBtn.style.display = 'none';
+    switchBtn.style.display = 'inline-block';
+    shutterBtn.style.display = 'inline-block';
+    retryBtn.style.display = 'none';
+    resultWrap.style.display = 'none';
+    video.style.display = 'block';
+    hint.textContent = 'แตะปุ่มกลมเพื่อถ่ายภาพ';
+    if(!modelsReady) await loadModels();
+  }catch(err){
+    setStatus('เปิดกล้องไม่ได้: ' + err.message);
+  }
+}
+
+switchBtn.addEventListener('click', ()=>{
+  facingMode = facingMode === 'environment' ? 'user' : 'environment';
+  startCamera();
+});
+
+startBtn.addEventListener('click', startCamera);
+retryBtn.addEventListener('click', startCamera);
+
+shutterBtn.addEventListener('click', async ()=>{
+  if(!modelsReady){
+    setStatus('ระบบตรวจจับใบหน้ายังโหลดไม่เสร็จ รอสักครู่...', true);
+    return;
+  }
+
+  // วาดภาพจากวิดีโอลง canvas ตามขนาดจริง
+  const w = video.videoWidth;
+  const h = video.videoHeight;
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(video, 0, 0, w, h);
+
+  setStatus('กำลังตรวจจับใบหน้า...', true);
+
+  const detections = await faceapi.detectAllFaces(
+    canvas,
+    new faceapi.TinyFaceDetectorOptions({ inputSize: 416, scoreThreshold: 0.4 })
+  );
+
+  if(detections.length === 0){
+    // ไม่พบใบหน้า แสดงภาพเปล่าๆ
+    video.style.display = 'none';
+    resultWrap.style.display = 'block';
+    resultImg.style.transition = 'none';
+    resultImg.style.transform = 'scale(1)';
+    resultImg.src = canvas.toDataURL('image/jpeg', 0.92);
+    shutterBtn.style.display = 'none';
+    switchBtn.style.display = 'none';
+    retryBtn.style.display = 'inline-block';
+    setStatus('ไม่พบใบหน้าในภาพ ลองถ่ายใหม่');
+    hint.textContent = 'ไม่พบใบหน้า';
+    return;
+  }
+
+  // สุ่มเลือก 1 ใบหน้า
+  const pick = detections[Math.floor(Math.random() * detections.length)];
+  const box = pick.box;
+
+  // วาดกรอบสีเขียวรอบใบหน้าที่สุ่มได้ ลงไปในภาพจริงเลย
+  // (เพื่อให้กรอบเคลื่อน/ซูมไปพร้อมกับภาพอย่างแม่นยำ)
+  const pad = box.width * 0.12;
+  const bx = Math.max(0, box.x - pad);
+  const by = Math.max(0, box.y - pad);
+  const bw = box.width + pad * 2;
+  const bh = box.height + pad * 2;
+  const lineW = Math.max(4, w * 0.006);
+  ctx.strokeStyle = '#39ff6a';
+  ctx.lineWidth = lineW;
+  ctx.shadowColor = 'rgba(57,255,106,0.8)';
+  ctx.shadowBlur = lineW * 2;
+  ctx.strokeRect(bx, by, bw, bh);
+  ctx.shadowBlur = 0;
+
+  // มุมกรอบสไตล์ viewfinder ให้ดูเหมือนล็อกเป้าหมาย
+  const cornerLen = Math.min(bw, bh) * 0.18;
+  ctx.lineWidth = lineW * 1.4;
+  const corners = [
+    [bx, by, 1, 1], [bx+bw, by, -1, 1],
+    [bx, by+bh, 1, -1], [bx+bw, by+bh, -1, -1]
+  ];
+  corners.forEach(([cx, cy, dx, dy])=>{
+    ctx.beginPath();
+    ctx.moveTo(cx, cy + cornerLen*dy);
+    ctx.lineTo(cx, cy);
+    ctx.lineTo(cx + cornerLen*dx, cy);
+    ctx.stroke();
+  });
+
+  // หยุดกล้อง แสดงภาพนิ่ง (มีกรอบเขียวติดอยู่ในภาพแล้ว)
+  video.style.display = 'none';
+  resultWrap.style.display = 'block';
+  resultImg.style.transition = 'none';
+  resultImg.style.transform = 'scale(1)';
+  resultImg.src = canvas.toDataURL('image/jpeg', 0.92);
+  shutterBtn.style.display = 'none';
+  switchBtn.style.display = 'none';
+  retryBtn.style.display = 'inline-block';
+
+  const faceCenterX = (box.x + box.width / 2) / w * 100;
+  const faceCenterY = (box.y + box.height / 2) / h * 100;
+
+  resultImg.style.transformOrigin = `${faceCenterX}% ${faceCenterY}%`;
+
+  setStatus(`พบ ${detections.length} ใบหน้า — สุ่มซูมเข้า 1 คน`);
+  hint.textContent = `กำลังซูมเข้าใบหน้าที่สุ่มได้`;
+
+  // บังคับ reflow แล้วค่อยเริ่ม transition เพื่อให้ transform-origin มีผล
+  requestAnimationFrame(()=>{
+    requestAnimationFrame(()=>{
+      resultImg.style.transition = 'transform 3.2s cubic-bezier(.22,.61,.16,1)';
+      resultImg.style.transform = 'scale(2.6)';
+    });
+  });
+});
+</script>
+</body>
+</html>
